@@ -1,7 +1,7 @@
 
 This is an adapted version of drmon written by [acidjazz](https://github.com/acidjazz/drmon). 
 It has been modified to work with 1.12.2 and has some added features
-![](examples/Screen2.jpg)
+![](examples/Screen2.png)
 > *status*: currently in development
 
 
