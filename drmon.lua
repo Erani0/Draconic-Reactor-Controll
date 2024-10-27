@@ -157,11 +157,15 @@ if ri.status == "running" then
         local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
 
         -- Anpassung des Inputs basierend auf der Sättigung
-        if satPercent < 10 then
-            -- Wenn die Energie-Sättigung unter 25% liegt, den Input erhöhen
+        if satPercent < 25 then
+            -- Wenn die Energie-Sättigung unter 25% liegt, Input erhöhen
             influx.setSignalLowFlow(autoInFlux * 1.5)  -- Erhöhe den Input um 50%
             outflux.setSignalLowFlow(0)  -- Stoppe den Output
             action = "Energie-Sättigung niedrig! Input erhöht."
+        elseif satPercent > 75 then
+            -- Wenn die Sättigung über 75% liegt, den Input senken
+            influx.setSignalLowFlow(autoInFlux * 0.5)  -- Senke den Input um 50%
+            action = "Energie-Sättigung hoch! Input reduziert."
         else
             -- Wenn die Sättigung stabil ist, normalisiere die Flüsse
             influx.setSignalLowFlow(autoInFlux)
@@ -173,6 +177,10 @@ if ri.status == "running" then
         if fieldPercent < targetStrength then
             influx.setSignalLowFlow(influx.getSignalLowFlow() * 1.1)  -- Erhöhe den Input um 10%
             action = "Feldstärke unter Zielwert! Input erhöht."
+        elseif fieldPercent > targetStrength + 5 then
+            -- Wenn die Feldstärke über dem Zielwert liegt, den Input senken
+            influx.setSignalLowFlow(influx.getSignalLowFlow() * 0.9)  -- Senke den Input um 10%
+            action = "Feldstärke über Zielwert! Input reduziert."
         end
 
         save_config()
@@ -182,7 +190,6 @@ if ri.status == "running" then
         outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
 end
-
 		
     -- safeguards
     --
