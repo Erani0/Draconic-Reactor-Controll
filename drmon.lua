@@ -3,7 +3,7 @@ local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, mo
 local targetStrength = 10
 local maxTemperature = 7000
 local safeTemperature = 3000
-local targetTemperature = 7000
+local targetTemperature = 6950
 local lowestFieldPercent = 10
 
 local activateOnCharged = 1
@@ -144,7 +144,7 @@ function update()
     -- are we on? regulate the input fludgate to our target field strength
     -- or set it to our saved setting since we are on manual
 if ri.status == "running" then
-    -- Berechnung der aktuellen Sättigung
+    -- Berechnung der aktuellen Sättigung und Feldstärke
     local satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000) * .01
     local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
 
@@ -159,10 +159,13 @@ if ri.status == "running" then
         local adjustedOutFlux = baseOutFlux
 
         -- Temperaturüberwachung
-        if ri.temperature > maxTemperature then
+        if ri.temperature >= maxTemperature then
             adjustedInFlux = 0  -- Stoppe den Input
             adjustedOutFlux = 0  -- Stoppe den Output
             action = "Temperatur zu hoch! Alle Flüsse gestoppt."
+        elseif ri.temperature >= targetTemperature then
+            adjustedInFlux = adjustedInFlux * 0.5  -- Reduziere den Input um 50% als Vorwarnung
+            action = "Warnung! Temperatur hoch! Input reduziert."
         else
             -- Anpassung des Inputs basierend auf der Energie-Sättigung
             if satPercent < 10 then
@@ -176,7 +179,7 @@ if ri.status == "running" then
                 adjustedInFlux = adjustedInFlux * 1.1  -- Erhöhe den Input um 10%
                 action = "Feldstärke unter Zielwert! Input erhöht."
             elseif fieldPercent < lowestFieldPercent then
-                adjustedInFlux = 0  -- Stoppe den Input, wenn die Feldstärke zu niedrig ist
+                adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
                 adjustedOutFlux = 0  -- Stoppe den Output
                 action = "Feldstärke kritisch niedrig! Alle Flüsse gestoppt."
             elseif fieldPercent > targetStrength + 5 then
@@ -196,7 +199,6 @@ if ri.status == "running" then
         outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
 end
-
 
 		
 		
