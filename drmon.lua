@@ -14,7 +14,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.13"
+local version = "4.14"
 
 -- last performed action
 local action = "None since reboot"
