@@ -1,3 +1,17 @@
+
+-- peripheral identification
+--
+function periphSearch(type)
+   local names = peripheral.getNames()
+   local i, name
+   for i, name in pairs(names) do
+      if peripheral.getType(name) == type then
+         return peripheral.wrap(name)
+      end
+   end
+   return null
+end
+
 -- formatting
 
 function format_int(number)
@@ -53,4 +67,13 @@ function progress_bar(mon, x, y, length, minVal, maxVal, bar_color, bg_color)
   draw_line(mon, x, y, length, bg_color) --backgoround bar
   local barSize = math.floor((minVal/maxVal) * length)
   draw_line(mon, x, y, barSize, bar_color) --progress so far
+end
+
+
+function clear(mon)
+  term.clear()
+  term.setCursorPos(1,1)
+  mon.monitor.setBackgroundColor(colors.black)
+  mon.monitor.clear()
+  mon.monitor.setCursorPos(1,1)
 end
