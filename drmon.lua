@@ -1,7 +1,7 @@
 local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, monX, monY, reactor, outflux, influx, ri, monType, modem, message
 
 local targetStrength = 10
-local maxTemperature = 7900
+local maxTemperature = 7000
 local safeTemperature = 3000
 local targetTemperature = 7000
 local lowestFieldPercent = 10
@@ -12,7 +12,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.7"
+local version = "4.8"
 
 -- last performed action
 local action = "None since reboot"
@@ -154,36 +154,40 @@ if ri.status == "running" then
         local baseInFlux = ri.fieldDrainRate / (1 - (targetStrength / 100))
         local baseOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
 
-        -- Dynamische Anpassungen basierend auf Sättigung und Feldstärke
+        -- Initiale Werte für angepassten Input und Output
         local adjustedInFlux = baseInFlux
         local adjustedOutFlux = baseOutFlux
 
-        -- Anpassung des Inputs basierend auf der Energie-Sättigung
-        if satPercent < 15 then
-            adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
-            adjustedOutFlux = 0  -- Stoppe den Output
-            action = "Energie-Sättigung niedrig! Input erhöht."
-        end
-
-        -- Feldstärke-Anpassung
-        if fieldPercent < targetStrength then
-            adjustedInFlux = adjustedInFlux * 1.1  -- Erhöhe den Input um 10%
-            action = "Feldstärke unter Zielwert! Input erhöht."
-        elseif fieldPercent > targetStrength + 5 then
-            adjustedInFlux = adjustedInFlux * 0.9  -- Senke den Input um 10%
-            action = "Feldstärke über Zielwert! Input reduziert."
-        end
-
-        -- Temperaturkontrolle
+        -- Temperaturüberwachung
         if ri.temperature > maxTemperature then
-            adjustedInFlux = adjustedInFlux * 0.5  -- Senke den Input stark, um die Temperatur zu senken
-            adjustedOutFlux = 0  -- Stoppe den Output, um weitere Erwärmung zu vermeiden
-            action = "Temperatur zu hoch! Input reduziert."
-        end
+            adjustedInFlux = 0  -- Stoppe den Input
+            adjustedOutFlux = 0  -- Stoppe den Output
+            action = "Temperatur zu hoch! Alle Flüsse gestoppt."
+        else
+            -- Anpassung des Inputs basierend auf der Energie-Sättigung
+            if satPercent < 10 then
+                adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
+                adjustedOutFlux = 0  -- Stoppe den Output
+                action = "Energie-Sättigung niedrig! Input erhöht."
+            end
 
-        -- Setze die berechneten Flüsse
-        influx.setSignalLowFlow(adjustedInFlux)
-        outflux.setSignalLowFlow(adjustedOutFlux)
+            -- Feldstärke-Anpassung
+            if fieldPercent < targetStrength then
+                adjustedInFlux = adjustedInFlux * 1.1  -- Erhöhe den Input um 10%
+                action = "Feldstärke unter Zielwert! Input erhöht."
+            elseif fieldPercent < lowestFieldPercent then
+                adjustedInFlux = 0  -- Stoppe den Input, wenn die Feldstärke zu niedrig ist
+                adjustedOutFlux = 0  -- Stoppe den Output
+                action = "Feldstärke kritisch niedrig! Alle Flüsse gestoppt."
+            elseif fieldPercent > targetStrength + 5 then
+                adjustedInFlux = adjustedInFlux * 0.9  -- Senke den Input um 10%
+                action = "Feldstärke über Zielwert! Input reduziert."
+            end
+
+            -- Setze die berechneten Flüsse
+            influx.setSignalLowFlow(adjustedInFlux)
+            outflux.setSignalLowFlow(adjustedOutFlux)
+        end
 
         save_config()
     else
@@ -191,7 +195,11 @@ if ri.status == "running" then
         influx.setSignalLowFlow(0)  -- Optional: Stoppe den Input
         outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
-end		
+end
+
+
+		
+		
     -- safeguards
     --
     -- out of fuel, kill it
