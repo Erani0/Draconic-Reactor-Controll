@@ -12,7 +12,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.5"
+local version = "4.6"
 
 -- last performed action
 local action = "None since reboot"
