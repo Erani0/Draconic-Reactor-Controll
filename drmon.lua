@@ -1,9 +1,9 @@
 local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, monX, monY, reactor, outflux, influx, ri, monType, modem, message
 
-local targetStrength = 25
-local maxTemperature = 7900
+local targetStrength = 50
+local maxTemperature = 7000
 local safeTemperature = 3000
-local targetTemperature = 7000
+local targetTemperature = 6000
 local lowestFieldPercent = 15
 
 local activateOnCharged = 1
@@ -129,7 +129,7 @@ function update()
     end
     -- are we charging? open the floodgates
     if ri.status == "warming_up" then
-      influx.setSignalLowFlow(900000)
+      influx.setSignalLowFlow(600000)
       emergencyCharge = false
     end
     -- are we stopping from a shutdown and our temp is better? activate
@@ -145,7 +145,7 @@ function update()
     -- or set it to our saved setting since we are on manual
     if ri.status == "running" then
       autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/100) )
-      autoOutFlux = ( math.max( 10, ri.generationRate ) / ( ri.temperature / targetTemperature ) )
+      autoOutFlux = ( math.max( 5, ri.generationRate ) / ( ri.temperature / targetTemperature ) )
       print("Target Input Gate: ".. autoInFlux)
       print("Target Output Gate: ".. autoOutFlux)
       influx.setSignalLowFlow(autoInFlux)
