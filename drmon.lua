@@ -5,6 +5,7 @@ local maxTemperature = 7000
 local safeTemperature = 3000
 local targetTemperature = 6950
 local lowestFieldPercent = 10
+local stopTemperature = 6500
 
 local activateOnCharged = 1
 local identify = false
@@ -12,7 +13,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.8"
+local version = "4.9"
 
 -- last performed action
 local action = "None since reboot"
@@ -159,16 +160,18 @@ if ri.status == "running" then
         local adjustedOutFlux = baseOutFlux
 
         -- Temperaturüberwachung
-        if ri.temperature >= maxTemperature then
+        if ri.temperature >= stopTemperature then
+            -- Stoppe alle Änderungen, wenn die Temperatur 6500 Grad überschreitet
+            adjustedInFlux = influx.getSignalLowFlow()  -- Behalte den aktuellen Input bei
+            adjustedOutFlux = outflux.getSignalLowFlow()  -- Behalte den aktuellen Output bei
+            action = "Temperatur zu hoch! Keine Änderungen an Input und Output."
+        elseif ri.temperature >= maxTemperature then
             adjustedInFlux = 0  -- Stoppe den Input
             adjustedOutFlux = 0  -- Stoppe den Output
             action = "Temperatur zu hoch! Alle Flüsse gestoppt."
-        elseif ri.temperature >= targetTemperature then
-            adjustedInFlux = adjustedInFlux * 0.5  -- Reduziere den Input um 50% als Vorwarnung
-            action = "Warnung! Temperatur hoch! Input reduziert."
         else
             -- Anpassung des Inputs basierend auf der Energie-Sättigung
-            if satPercent < 10 then
+            if satPercent < 15 then
                 adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
                 adjustedOutFlux = 0  -- Stoppe den Output
                 action = "Energie-Sättigung niedrig! Input erhöht."
@@ -179,7 +182,7 @@ if ri.status == "running" then
                 adjustedInFlux = adjustedInFlux * 1.1  -- Erhöhe den Input um 10%
                 action = "Feldstärke unter Zielwert! Input erhöht."
             elseif fieldPercent < lowestFieldPercent then
-                adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
+                adjustedInFlux = 0  -- Stoppe den Input, wenn die Feldstärke zu niedrig ist
                 adjustedOutFlux = 0  -- Stoppe den Output
                 action = "Feldstärke kritisch niedrig! Alle Flüsse gestoppt."
             elseif fieldPercent > targetStrength + 5 then
@@ -199,7 +202,6 @@ if ri.status == "running" then
         outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
 end
-
 		
 		
     -- safeguards
