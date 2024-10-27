@@ -1,10 +1,10 @@
 local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, monX, monY, reactor, outflux, influx, ri, monType, modem, message
 
-local targetStrength = 20
-local maxTemperature = 7000
+local targetStrength = 25
+local maxTemperature = 7900
 local safeTemperature = 3000
-local targetTemperature = 6000
-local lowestFieldPercent = 20
+local targetTemperature = 7000
+local lowestFieldPercent = 15
 
 local activateOnCharged = 1
 local identify = false
@@ -129,7 +129,7 @@ function update()
     end
     -- are we charging? open the floodgates
     if ri.status == "warming_up" then
-      influx.setSignalLowFlow(600000)
+      influx.setSignalLowFlow(900000)
       emergencyCharge = false
     end
     -- are we stopping from a shutdown and our temp is better? activate
@@ -143,28 +143,36 @@ function update()
     end
     -- are we on? regulate the input fludgate to our target field strength
     -- or set it to our saved setting since we are on manual
-autoOutFlux = autoOutFlux or 0
-maxOutFlux = maxOutFlux or 5500000  -- Beispielwert für maxOutFlux, anpassbar je nach Systemanforderungen
+local MAX_INPUT_RATE = 260000 -- Max input rate in RF/t
+local MAX_GENERATION = 6000000 -- Max generation capacity
+
+-- Function to calculate optimal input based on generation rate
+local function calculateOptimalInput(generationRate, temperature, targetTemperature)
+    -- Calculate the optimal input required to achieve the desired generation rate
+    local requiredInput = (generationRate / (targetTemperature / temperature)) * (1 - (targetStrength / 100))
+    return math.min(requiredInput, MAX_INPUT_RATE) -- Limit to MAX_INPUT_RATE
+end
+
+-- Function to calculate optimal output based on current energy saturation
+local function calculateOptimalOutput(energySaturation, generationRate)
+    -- For simplicity, assume output is based on the current generation capacity
+    return math.min(generationRate, energySaturation) -- Limit to current energy level
+end
 
 if ri.status == "running" then
-    -- Berechnung von autoInFlux basierend auf ursprünglicher Formel
-    autoInFlux = ri.fieldDrainRate / (1 - (targetStrength / 100))
+    -- Calculate the optimal input and output rates
+    local autoInFlux = calculateOptimalInput(ri.generationRate, ri.temperature, targetTemperature)
+    local autoOutFlux = calculateOptimalOutput(ri.energySaturation, ri.generationRate)
 
-    -- Zielwert für autoOutFlux und schrittweise Anpassung
-    local targetOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
-    local adjustmentRateOut = 0.05  -- 5% Anpassung pro Iteration für Output
+    -- Log the target input and output gate values
+    print("Calculated Input Gate: " .. autoInFlux)
+    print("Calculated Output Gate: " .. autoOutFlux)
 
-    -- Berechnung des geglätteten Output-Gate-Wertes
-    autoOutFlux = autoOutFlux + (targetOutFlux - autoOutFlux) * adjustmentRateOut
-    autoOutFlux = math.min(autoOutFlux, maxOutFlux)  -- Begrenzung auf Maximalwert
-
-    print("Berechneter Input Gate-Wert: " .. autoInFlux)
-    print("Berechneter Output Gate-Wert: " .. autoOutFlux)
-
-    -- Setzen der Input- und Output-Gate-Werte
+    -- Set the signals based on the calculated flow rates
     influx.setSignalLowFlow(autoInFlux)
     outflux.setSignalLowFlow(autoOutFlux)
 
+    -- Save configuration
     save_config()
 end
 		
@@ -221,7 +229,7 @@ end
 	end
 
 function patch()
-  local installURL = "https://raw.githubusercontent.com/Erani0/drmon/1.20.1/install.lua"
+  local installURL = "https://raw.githubusercontent.com/Erani0/drmon/full-auto/install.lua"
   install = http.get(installURL)
   installFile = install.readAll()
   local file = fs.open("startup", "w")
