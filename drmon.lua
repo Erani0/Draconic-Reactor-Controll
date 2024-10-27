@@ -1,6 +1,6 @@
 local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, monX, monY, reactor, outflux, influx, ri, monType, modem, message
 
-local targetStrength = 20
+local targetStrength = 10
 local maxTemperature = 7900
 local safeTemperature = 3000
 local targetTemperature = 7000
@@ -159,13 +159,10 @@ if ri.status == "running" then
         local adjustedOutFlux = baseOutFlux
 
         -- Anpassung des Inputs basierend auf der Energie-Sättigung
-        if satPercent < 25 then
+        if satPercent < 15 then
             adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
             adjustedOutFlux = 0  -- Stoppe den Output
             action = "Energie-Sättigung niedrig! Input erhöht."
-        elseif satPercent > 75 then
-            adjustedInFlux = adjustedInFlux * 0.5  -- Senke den Input um 50%
-            action = "Energie-Sättigung hoch! Input reduziert."
         end
 
         -- Feldstärke-Anpassung
