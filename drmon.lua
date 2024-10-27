@@ -14,7 +14,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.12"
+local version = "4.13"
 
 -- last performed action
 local action = "None since reboot"
@@ -163,7 +163,7 @@ if ri.status == "running" then
         -- Temperaturüberwachung
         if ri.temperature >= stopTemperature then
             -- Bei 6500 Grad: Stoppe den Input sofort
-            adjustedInFlux = 0
+            adjustedInFlux = adjustedInFlux * 2
             -- Erhöhe den Output schrittweise, wenn die Temperatur unter 6900 Grad bleibt
             if ri.temperature < criticalTemperature then
                 adjustedOutFlux = adjustedOutFlux + (baseOutFlux * 0.05)  -- Erhöhe den Output um 5%
