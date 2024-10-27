@@ -154,23 +154,24 @@ if ri.status == "running" then
         local satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000) * .01
         local minSaturation = 10  -- Setze einen minimalen Wert für die Sättigung
 
-        if satPercent > minSaturation then
-            -- Überprüfen der Feldstärke
-            local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
-            if fieldPercent >= lowestFieldPercent then
+        -- Überprüfen der Feldstärke
+        local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
+
+        if fieldPercent >= lowestFieldPercent then
+            if satPercent > minSaturation then
                 influx.setSignalLowFlow(autoInFlux)
                 outflux.setSignalLowFlow(autoOutFlux)
             else
-                -- Wenn die Feldstärke zu niedrig ist, reduziere die Flüsse
-                influx.setSignalLowFlow(0)  -- Stoppe den Input
+                -- Stoppe den Output, um die Sättigung zu halten
                 outflux.setSignalLowFlow(0)  -- Stoppe den Output
-                action = "Feldstärke zu niedrig! Eingabe/Entnahme gestoppt."
+                influx.setSignalLowFlow(math.max(autoInFlux, 10000))  -- Stelle sicher, dass Input vorhanden ist
+                action = "Energie-Sättigung niedrig! Input aufrechterhalten."
             end
         else
-            -- Stoppe die Entnahme, wenn die Sättigung zu niedrig ist
-            influx.setSignalLowFlow(0)  -- Stoppe den Input
+            -- Wenn die Feldstärke zu niedrig ist, erhöhe den Input
+            influx.setSignalLowFlow(math.max(autoInFlux * 1.2, 10000))  -- Erhöhe den Input
             outflux.setSignalLowFlow(0)  -- Stoppe den Output
-            action = "Energie-Sättigung zu niedrig! Eingabe/Entnahme gestoppt."
+            action = "Feldstärke zu niedrig! Input erhöht."
         end
     else
         -- Stabilisiere die Flüsse oder gehe in den Standby-Modus
@@ -180,6 +181,8 @@ if ri.status == "running" then
 
     save_config()
 end
+
+
 		
     -- safeguards
     --
