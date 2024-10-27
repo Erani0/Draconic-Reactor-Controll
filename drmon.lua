@@ -143,44 +143,30 @@ function update()
     end
     -- are we on? regulate the input fludgate to our target field strength
     -- or set it to our saved setting since we are on manual
--- Define constants
-local MAX_INPUT_RATE = 260000 -- Max input rate in RF/t
-local MAX_GENERATION = 6000000 -- Max generation capacity
-
--- Function to calculate optimal input based on generation rate
-local function calculateOptimalInput(generationRate, temperature, targetTemperature)
-    -- This formula needs to be refined to achieve the desired generation rate based on current conditions
-    local requiredInput = generationRate / (targetTemperature / temperature)
-    -- Ensure the required input does not exceed the maximum input rate
-    return math.min(requiredInput, MAX_INPUT_RATE)
-end
-
--- Function to calculate optimal output based on current energy saturation
-local function calculateOptimalOutput(energySaturation, generationRate)
-    -- Assume the output is based on the current generation capacity
-    return math.min(generationRate, energySaturation) -- Limit to current energy level
-end
-
 if ri.status == "running" then
-    -- Calculate the optimal input and output rates
-    local autoInFlux = calculateOptimalInput(ri.generationRate, ri.temperature, targetTemperature)
-    local autoOutFlux = calculateOptimalOutput(ri.energySaturation, ri.generationRate)
+    -- Autonome Steuerung bis zur Zieltemperatur
+    if ri.temperature < targetTemperature then
+        local autoInFlux = ri.fieldDrainRate / (1 - (targetStrength / 100))
+        local autoOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
 
-    -- Log the target input and output gate values for debugging
-    print("Current Generation Rate: " .. ri.generationRate)
-    print("Current Temperature: " .. ri.temperature)
-    print("Target Temperature: " .. targetTemperature)
-    print("Calculated Input Gate: " .. autoInFlux)
-    print("Calculated Output Gate: " .. autoOutFlux)
+        -- Überprüfen der Feldstärke
+        local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
+        if fieldPercent >= lowestFieldPercent then
+            influx.setSignalLowFlow(autoInFlux)
+            outflux.setSignalLowFlow(autoOutFlux)
+        else
+            -- Falls die Feldstärke zu niedrig ist, regele den Input und Output herunter
+            influx.setSignalLowFlow(0)  -- Stoppe den Input
+            outflux.setSignalLowFlow(0)  -- Stoppe den Output
+            action = "Feldstärke zu niedrig! Eingabe/Entnahme gestoppt."
+        end
+    else
+        -- Optional: Hier könntest du zusätzliche Logik hinzufügen, wenn die Zieltemperatur erreicht ist
+        -- Zum Beispiel: Stabilisiere die Flüsse oder gehe in den Standby-Modus
+    end
 
-    -- Set the signals based on the calculated flow rates
-    influx.setSignalLowFlow(autoInFlux)
-    outflux.setSignalLowFlow(autoOutFlux)
-
-    -- Save configuration
     save_config()
-end
-		
+end		
     -- safeguards
     --
     -- out of fuel, kill it
