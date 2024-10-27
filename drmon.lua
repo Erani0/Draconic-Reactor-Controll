@@ -12,7 +12,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.3"
+local version = "4.4"
 
 -- last performed action
 local action = "None since reboot"
@@ -162,10 +162,6 @@ if ri.status == "running" then
             influx.setSignalLowFlow(autoInFlux * 1.5)  -- Erhöhe den Input um 50%
             outflux.setSignalLowFlow(0)  -- Stoppe den Output
             action = "Energie-Sättigung niedrig! Input erhöht."
-        elseif satPercent > 75 then
-            -- Wenn die Sättigung über 75% liegt, den Input senken
-            influx.setSignalLowFlow(autoInFlux * 0.5)  -- Senke den Input um 50%
-            action = "Energie-Sättigung hoch! Input reduziert."
         else
             -- Wenn die Sättigung stabil ist, normalisiere die Flüsse
             influx.setSignalLowFlow(autoInFlux)
@@ -220,8 +216,8 @@ end
 	function SecondsToClock(time)
 	  local time = tonumber(time)
 
-	  if time <= 0 then
-		return "00:00:00";
+	  if time == nil or time <= 0 then
+    		return "00:00:00"
 	  else
 			local days = math.floor(time/86400)
 		  local remaining = time % 86400
