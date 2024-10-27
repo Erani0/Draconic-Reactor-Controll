@@ -1,10 +1,10 @@
 local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, monX, monY, reactor, outflux, influx, ri, monType, modem, message
 
-local targetStrength = 50
+local targetStrength = 20
 local maxTemperature = 7000
 local safeTemperature = 3000
 local targetTemperature = 6000
-local lowestFieldPercent = 15
+local lowestFieldPercent = 20
 
 local activateOnCharged = 1
 local identify = false
@@ -145,7 +145,7 @@ function update()
     -- or set it to our saved setting since we are on manual
     if ri.status == "running" then
       autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/200) )
-      autoOutFlux = (math.max( 10, ri.generationRate) / (ri.temperature / targetTemperature))
+      autoOutFlux = (math.max( 10, ri.generationRate) / (ri.temperature / targetTemperature) / 10)
       print("Target Input Gate: ".. autoInFlux)
       print("Target Output Gate: ".. autoOutFlux)
       influx.setSignalLowFlow(autoInFlux)
