@@ -150,38 +150,29 @@ if ri.status == "running" then
         local autoInFlux = ri.fieldDrainRate / (1 - (targetStrength / 100))
         local autoOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
 
-        -- Überprüfen der aktuellen Energie-Sättigung
-        local satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000) * .01
-        local minSaturation = 10  -- Setze einen minimalen Wert für die Sättigung
-
-        -- Überprüfen der Feldstärke
+        -- Überprüfen der aktuellen Feldstärke
         local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
 
-        if fieldPercent >= lowestFieldPercent then
-            if satPercent > minSaturation then
-                influx.setSignalLowFlow(autoInFlux)
-                outflux.setSignalLowFlow(autoOutFlux)
-            else
-                -- Stoppe den Output, um die Sättigung zu halten
-                outflux.setSignalLowFlow(0)  -- Stoppe den Output
-                influx.setSignalLowFlow(math.max(autoInFlux, 10000))  -- Stelle sicher, dass Input vorhanden ist
-                action = "Energie-Sättigung niedrig! Input aufrechterhalten."
-            end
-        else
-            -- Wenn die Feldstärke zu niedrig ist, erhöhe den Input
-            influx.setSignalLowFlow(math.max(autoInFlux * 1.2, 10000))  -- Erhöhe den Input
+        -- Überprüfen, ob die Feldstärke zu niedrig ist
+        if fieldPercent < targetStrength then
+            -- Erhöhe den Input, um die Feldstärke zu stabilisieren
+            influx.setSignalLowFlow(autoInFlux * 1.2)  -- Erhöhe den Input um 20%
             outflux.setSignalLowFlow(0)  -- Stoppe den Output
-            action = "Feldstärke zu niedrig! Input erhöht."
+            action = "Feldstärke unter Zielwert! Input erhöht."
+        else
+            -- Wenn die Feldstärke stabil ist, normalisiere die Flüsse
+            influx.setSignalLowFlow(autoInFlux)
+            outflux.setSignalLowFlow(autoOutFlux)
+            action = "Feldstärke stabil, Flüsse normalisiert."
         end
+
+        save_config()
     else
         -- Stabilisiere die Flüsse oder gehe in den Standby-Modus
         influx.setSignalLowFlow(0)  -- Optional: Stoppe den Input
         outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
-
-    save_config()
 end
-
 
 		
     -- safeguards
