@@ -206,7 +206,7 @@ end
 	end
 
 function patch()
-  local installURL = "https://raw.githubusercontent.com/Erani0/drmon/full-auto/install.lua"
+  local installURL = "https://raw.githubusercontent.com/Erani0/drmon/1.20.1/install.lua"
   install = http.get(installURL)
   installFile = install.readAll()
   local file = fs.open("startup", "w")
