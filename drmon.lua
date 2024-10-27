@@ -145,7 +145,7 @@ function update()
     -- or set it to our saved setting since we are on manual
     if ri.status == "running" then
       autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/100) )
-      autoOutFlux = (math.max( 10, ri.generationRate) / (ri.temperature / targetTemperature) / 2)
+      autoOutFlux = (math.max( 10, ri.generationRate) / (ri.temperature / targetTemperature) / 0.5)
       print("Target Input Gate: ".. autoInFlux)
       print("Target Output Gate: ".. autoOutFlux)
       influx.setSignalLowFlow(autoInFlux)
