@@ -143,15 +143,28 @@ function update()
     end
     -- are we on? regulate the input fludgate to our target field strength
     -- or set it to our saved setting since we are on manual
-    if ri.status == "running" then
-      autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/100) )
-      autoOutFlux = ri.generationRate / (ri.temperature / targetTemperature)
-      print("Target Input Gate: ".. autoInFlux)
-      print("Target Output Gate: ".. autoOutFlux)
-      influx.setSignalLowFlow(autoInFlux)
-      outflux.setSignalLowFlow(autoOutFlux)
-    end
-    -- safeguards
+if ri.status == "running" then
+    -- Zielwert für autoInFlux mit einer Anpassung an die aktuelle Feldrate
+    local targetInFlux = ri.fieldDrainRate / (1 - (targetStrength/100))
+    
+    -- Begrenzung der Geschwindigkeit der Anpassung
+    local adjustmentRate = 0.1  -- Die Geschwindigkeit, mit der der Flux angepasst wird, z.B. 10% pro Iteration
+    autoInFlux = autoInFlux + (targetInFlux - autoInFlux) * adjustmentRate
+    autoInFlux = math.min(autoInFlux, maxInFlux)  -- Begrenze den Fluss auf maxInFlux
+
+    -- Alternative Berechnung für Output Gate
+    local targetOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
+    autoOutFlux = math.min(targetOutFlux, maxOutFlux)
+
+    print("Berechneter Input Gate-Wert: " .. autoInFlux)
+    print("Berechneter Output Gate-Wert: " .. autoOutFlux)
+
+    -- Setze die neuen Flusswerte
+    influx.setSignalLowFlow(autoInFlux)
+    outflux.setSignalLowFlow(autoOutFlux)
+
+    save_config()
+end    -- safeguards
     --
     -- out of fuel, kill it
     if fuelPercent <= 10 then
