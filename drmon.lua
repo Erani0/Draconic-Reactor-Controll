@@ -162,49 +162,39 @@ if ri.status == "running" then
 
         -- Temperaturüberwachung
         if ri.temperature >= stopTemperature then
-            -- Bei 6500 Grad: Stoppe den Input
+            -- Bei 6500 Grad: Stoppe den Input sofort
             adjustedInFlux = 0
-            action = "Temperatur über 6500 Grad! Input gestoppt."
-
+            -- Erhöhe den Output schrittweise, wenn die Temperatur unter 6900 Grad bleibt
             if ri.temperature < criticalTemperature then
-                -- Erhöhe den Output schrittweise, solange die Temperatur unter 6900 Grad bleibt
                 adjustedOutFlux = adjustedOutFlux + (baseOutFlux * 0.05)  -- Erhöhe den Output um 5%
-                action = action .. " Output schrittweise erhöht."
-            else
-                -- Bei 6900 Grad: Stoppe die Erhöhung des Outputs
+            elseif ri.temperature >= criticalTemperature then
                 adjustedOutFlux = adjustedOutFlux  -- Halte den Output stabil
-                action = action .. " Output stabilisiert bei 6900 Grad."
             end
         elseif ri.temperature >= maxTemperature then
             -- Bei 7000 Grad: Stoppe alle Flüsse
             adjustedInFlux = 0
             adjustedOutFlux = 0
-            action = "Maximale Temperatur erreicht! Alle Flüsse gestoppt."
         else
             -- Anpassung des Inputs basierend auf der Energie-Sättigung
             if satPercent < 15 then
-                adjustedInFlux = adjustedInFlux * 2  -- Erhöhe den Input um 100%
+                adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
                 adjustedOutFlux = 0  -- Stoppe den Output
-                action = "Energie-Sättigung niedrig! Input erhöht."
             end
 
             -- Feldstärke-Anpassung
             if fieldPercent < targetStrength then
-                adjustedInFlux = adjustedInFlux * 1.2  -- Erhöhe den Input um 20%
-                action = "Feldstärke unter Zielwert! Input erhöht."
+                adjustedInFlux = adjustedInFlux * 1.1  -- Erhöhe den Input um 10%
             elseif fieldPercent < lowestFieldPercent then
                 adjustedInFlux = 0  -- Stoppe den Input, wenn die Feldstärke zu niedrig ist
                 adjustedOutFlux = 0  -- Stoppe den Output
-                action = "Feldstärke kritisch niedrig! Alle Flüsse gestoppt."
             elseif fieldPercent > targetStrength + 5 then
-                adjustedInFlux = adjustedInFlux * 0.8  -- Senke den Input um 20%
-                action = "Feldstärke über Zielwert! Input reduziert."
+                adjustedInFlux = adjustedInFlux * 0.9  -- Senke den Input um 10%
             end
-
-            -- Setze die berechneten Flüsse
-            influx.setSignalLowFlow(adjustedInFlux)
-            outflux.setSignalLowFlow(adjustedOutFlux)
         end
+
+        -- Setze die berechneten Flüsse
+        influx.setSignalLowFlow(adjustedInFlux)
+        outflux.setSignalLowFlow(adjustedOutFlux)
 
         save_config()
     else
@@ -213,7 +203,6 @@ if ri.status == "running" then
         outflux.setSignalLowFlow(0)  -- Stoppe den Output
     end
 end
-
 
 		
 		
