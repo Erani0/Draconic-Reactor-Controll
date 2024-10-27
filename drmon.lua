@@ -12,7 +12,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.2"
+local version = "4.3"
 
 -- last performed action
 local action = "None since reboot"
@@ -144,6 +144,9 @@ function update()
     -- are we on? regulate the input fludgate to our target field strength
     -- or set it to our saved setting since we are on manual
 if ri.status == "running" then
+    -- Berechnung der aktuellen Sättigung
+    local satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000) * .01
+
     -- Autonome Steuerung bis zur Zieltemperatur
     if ri.temperature < targetTemperature then
         -- Berechnung der Input- und Output-Flüsse
@@ -153,17 +156,23 @@ if ri.status == "running" then
         -- Überprüfen der aktuellen Feldstärke
         local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
 
-        -- Überprüfen, ob die Feldstärke zu niedrig ist
-        if fieldPercent < targetStrength then
-            -- Erhöhe den Input, um die Feldstärke zu stabilisieren
-            influx.setSignalLowFlow(autoInFlux * 1.2)  -- Erhöhe den Input um 20%
+        -- Anpassung des Inputs basierend auf der Sättigung
+        if satPercent < 25 then
+            -- Wenn die Energie-Sättigung unter 25% liegt, den Input erhöhen
+            influx.setSignalLowFlow(autoInFlux * 1.5)  -- Erhöhe den Input um 50%
             outflux.setSignalLowFlow(0)  -- Stoppe den Output
-            action = "Feldstärke unter Zielwert! Input erhöht."
+            action = "Energie-Sättigung niedrig! Input erhöht."
         else
-            -- Wenn die Feldstärke stabil ist, normalisiere die Flüsse
+            -- Wenn die Sättigung stabil ist, normalisiere die Flüsse
             influx.setSignalLowFlow(autoInFlux)
             outflux.setSignalLowFlow(autoOutFlux)
-            action = "Feldstärke stabil, Flüsse normalisiert."
+            action = "Sättigung stabil, Flüsse normalisiert."
+        end
+
+        -- Feldstärke-Anpassung
+        if fieldPercent < targetStrength then
+            influx.setSignalLowFlow(influx.getSignalLowFlow() * 1.1)  -- Erhöhe den Input um 10%
+            action = "Feldstärke unter Zielwert! Input erhöht."
         end
 
         save_config()
@@ -173,7 +182,6 @@ if ri.status == "running" then
         outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
 end
-
 		
     -- safeguards
     --
