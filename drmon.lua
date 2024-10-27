@@ -4,7 +4,7 @@ local targetStrength = 15
 local maxTemperature = 7900
 local safeTemperature = 3000
 local targetTemperature = 7000
-local lowestFieldPercent = 5
+local lowestFieldPercent = 10
 
 local activateOnCharged = 1
 local identify = false
