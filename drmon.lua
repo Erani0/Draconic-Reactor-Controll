@@ -145,6 +145,7 @@ function update()
     -- or set it to our saved setting since we are on manual
 if ri.status == "running" then
     -- Zielwert für autoOutFlux basierend auf Temperatur und Generationsrate
+    local maxOutFlux = 6000000 -- Begrenzung der Ausgangsflussrate
     local targetOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
     autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/100) )
 
