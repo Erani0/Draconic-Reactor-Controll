@@ -70,8 +70,8 @@ function detect()
     if string.find(p[i],"monitor") then
       monitor = p[i]
     end
-    if string.find(p[i],"flux") then
-      if string.find(first,"flux") then
+    if string.find(p[i],"draconic_reactor") then
+      if string.find(first,"draconic_reactor") then
     second=p[i]
       else
     first=p[i]
