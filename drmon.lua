@@ -146,38 +146,40 @@ function update()
 if ri.status == "running" then
     -- Berechnung der aktuellen Sättigung
     local satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000) * .01
+    local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
 
     -- Autonome Steuerung bis zur Zieltemperatur
     if ri.temperature < targetTemperature then
         -- Berechnung der Input- und Output-Flüsse
-        local autoInFlux = ri.fieldDrainRate / (1 - (targetStrength / 100))
-        local autoOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
+        local baseInFlux = ri.fieldDrainRate / (1 - (targetStrength / 100))
+        local baseOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
 
-        -- Überprüfen der aktuellen Feldstärke
-        local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
+        -- Dynamische Anpassungen basierend auf Sättigung und Feldstärke
+        local adjustedInFlux = baseInFlux
+        local adjustedOutFlux = baseOutFlux
 
-        -- Anpassung des Inputs basierend auf der Sättigung
-        if satPercent < 15 then
-            -- Wenn die Energie-Sättigung unter 25% liegt, Input erhöhen
-            influx.setSignalLowFlow(autoInFlux * 1.5)  -- Erhöhe den Input um 50%
-            outflux.setSignalLowFlow(0)  -- Stoppe den Output
+        -- Anpassung des Inputs basierend auf der Energie-Sättigung
+        if satPercent < 25 then
+            adjustedInFlux = adjustedInFlux * 1.5  -- Erhöhe den Input um 50%
+            adjustedOutFlux = 0  -- Stoppe den Output
             action = "Energie-Sättigung niedrig! Input erhöht."
-        else
-            -- Wenn die Sättigung stabil ist, normalisiere die Flüsse
-            influx.setSignalLowFlow(autoInFlux)
-            outflux.setSignalLowFlow(autoOutFlux)
-            action = "Sättigung stabil, Flüsse normalisiert."
+        elseif satPercent > 75 then
+            adjustedInFlux = adjustedInFlux * 0.5  -- Senke den Input um 50%
+            action = "Energie-Sättigung hoch! Input reduziert."
         end
 
         -- Feldstärke-Anpassung
         if fieldPercent < targetStrength then
-            influx.setSignalLowFlow(influx.getSignalLowFlow() * 1.1)  -- Erhöhe den Input um 10%
+            adjustedInFlux = adjustedInFlux * 1.1  -- Erhöhe den Input um 10%
             action = "Feldstärke unter Zielwert! Input erhöht."
         elseif fieldPercent > targetStrength + 5 then
-            -- Wenn die Feldstärke über dem Zielwert liegt, den Input senken
-            influx.setSignalLowFlow(influx.getSignalLowFlow() * 0.9)  -- Senke den Input um 10%
+            adjustedInFlux = adjustedInFlux * 0.9  -- Senke den Input um 10%
             action = "Feldstärke über Zielwert! Input reduziert."
         end
+
+        -- Setze die berechneten Flüsse
+        influx.setSignalLowFlow(adjustedInFlux)
+        outflux.setSignalLowFlow(adjustedOutFlux)
 
         save_config()
     else
