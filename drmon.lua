@@ -144,7 +144,7 @@ function update()
     -- are we on? regulate the input fludgate to our target field strength
     -- or set it to our saved setting since we are on manual
     if ri.status == "running" then
-      autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/200) )
+      autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/100) )
       autoOutFlux = (math.max( 10, ri.generationRate) / (ri.temperature / targetTemperature) / 2)
       print("Target Input Gate: ".. autoInFlux)
       print("Target Output Gate: ".. autoOutFlux)
