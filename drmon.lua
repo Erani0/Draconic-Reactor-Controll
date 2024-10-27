@@ -146,27 +146,41 @@ function update()
 if ri.status == "running" then
     -- Autonome Steuerung bis zur Zieltemperatur
     if ri.temperature < targetTemperature then
+        -- Berechnung der Input- und Output-Flüsse
         local autoInFlux = ri.fieldDrainRate / (1 - (targetStrength / 100))
         local autoOutFlux = math.max(10, ri.generationRate) / (ri.temperature / targetTemperature)
 
-        -- Überprüfen der Feldstärke
-        local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
-        if fieldPercent >= lowestFieldPercent then
-            influx.setSignalLowFlow(autoInFlux)
-            outflux.setSignalLowFlow(autoOutFlux)
+        -- Überprüfen der aktuellen Energie-Sättigung
+        local satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000) * .01
+        local minSaturation = 10  -- Setze einen minimalen Wert für die Sättigung
+
+        if satPercent > minSaturation then
+            -- Überprüfen der Feldstärke
+            local fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000) * .01
+            if fieldPercent >= lowestFieldPercent then
+                influx.setSignalLowFlow(autoInFlux)
+                outflux.setSignalLowFlow(autoOutFlux)
+            else
+                -- Wenn die Feldstärke zu niedrig ist, reduziere die Flüsse
+                influx.setSignalLowFlow(0)  -- Stoppe den Input
+                outflux.setSignalLowFlow(0)  -- Stoppe den Output
+                action = "Feldstärke zu niedrig! Eingabe/Entnahme gestoppt."
+            end
         else
-            -- Falls die Feldstärke zu niedrig ist, regele den Input und Output herunter
+            -- Stoppe die Entnahme, wenn die Sättigung zu niedrig ist
             influx.setSignalLowFlow(0)  -- Stoppe den Input
             outflux.setSignalLowFlow(0)  -- Stoppe den Output
-            action = "Feldstärke zu niedrig! Eingabe/Entnahme gestoppt."
+            action = "Energie-Sättigung zu niedrig! Eingabe/Entnahme gestoppt."
         end
     else
-        -- Optional: Hier könntest du zusätzliche Logik hinzufügen, wenn die Zieltemperatur erreicht ist
-        -- Zum Beispiel: Stabilisiere die Flüsse oder gehe in den Standby-Modus
+        -- Stabilisiere die Flüsse oder gehe in den Standby-Modus
+        influx.setSignalLowFlow(0)  -- Optional: Stoppe den Input
+        outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
 
     save_config()
-end		
+end
+		
     -- safeguards
     --
     -- out of fuel, kill it
