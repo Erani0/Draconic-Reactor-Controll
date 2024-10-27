@@ -3,9 +3,10 @@ local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, mo
 local targetStrength = 10
 local maxTemperature = 7000
 local safeTemperature = 3000
-local targetTemperature = 6950
+local targetTemperature = 6900
 local lowestFieldPercent = 10
 local stopTemperature = 6500
+local criticalTemperature = 6900
 
 local activateOnCharged = 1
 local identify = false
@@ -13,7 +14,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.91"
+local version = "4.11"
 
 -- last performed action
 local action = "None since reboot"
@@ -161,15 +162,24 @@ if ri.status == "running" then
 
         -- Temperaturüberwachung
         if ri.temperature >= stopTemperature then
-            -- Bei 6500 Grad: Stoppe Änderungen an Input und Output
-            adjustedInFlux = influx.getSignalLowFlow()  -- Behalte den aktuellen Input bei
-            adjustedOutFlux = outflux.getSignalLowFlow()  -- Behalte den aktuellen Output bei
-            action = "Temperatur zu hoch! Keine Änderungen an Input und Output."
+            -- Bei 6500 Grad: Stoppe den Input
+            adjustedInFlux = 0
+            action = "Temperatur über 6500 Grad! Input gestoppt."
+
+            if ri.temperature < criticalTemperature then
+                -- Erhöhe den Output schrittweise, solange die Temperatur unter 6900 Grad bleibt
+                adjustedOutFlux = adjustedOutFlux + (baseOutFlux * 0.05)  -- Erhöhe den Output um 5%
+                action = action .. " Output schrittweise erhöht."
+            else
+                -- Bei 6900 Grad: Stoppe die Erhöhung des Outputs
+                adjustedOutFlux = adjustedOutFlux  -- Halte den Output stabil
+                action = action .. " Output stabilisiert bei 6900 Grad."
+            end
         elseif ri.temperature >= maxTemperature then
             -- Bei 7000 Grad: Stoppe alle Flüsse
-            adjustedInFlux = adjustedInFlux * 2
+            adjustedInFlux = 0
             adjustedOutFlux = 0
-            action = "Temperatur zu hoch! Alle Flüsse gestoppt."
+            action = "Maximale Temperatur erreicht! Alle Flüsse gestoppt."
         else
             -- Anpassung des Inputs basierend auf der Energie-Sättigung
             if satPercent < 15 then
@@ -199,8 +209,8 @@ if ri.status == "running" then
         save_config()
     else
         -- Stabilisiere die Flüsse oder gehe in den Standby-Modus
-        influx.setSignalLowFlow(0)  -- Optional: Stoppe den Input
-        outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
+        influx.setSignalLowFlow(0)  -- Stoppe den Input
+        outflux.setSignalLowFlow(0)  -- Stoppe den Output
     end
 end
 
