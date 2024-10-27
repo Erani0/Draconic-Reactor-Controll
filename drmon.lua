@@ -12,7 +12,7 @@ local identify = false
 -- please leave things untouched from here on
 os.loadAPI("lib/f")
 
-local version = "4.6"
+local version = "4.7"
 
 -- last performed action
 local action = "None since reboot"
@@ -174,6 +174,13 @@ if ri.status == "running" then
             action = "Feldstärke über Zielwert! Input reduziert."
         end
 
+        -- Temperaturkontrolle
+        if ri.temperature > maxTemperature then
+            adjustedInFlux = adjustedInFlux * 0.5  -- Senke den Input stark, um die Temperatur zu senken
+            adjustedOutFlux = 0  -- Stoppe den Output, um weitere Erwärmung zu vermeiden
+            action = "Temperatur zu hoch! Input reduziert."
+        end
+
         -- Setze die berechneten Flüsse
         influx.setSignalLowFlow(adjustedInFlux)
         outflux.setSignalLowFlow(adjustedOutFlux)
@@ -184,8 +191,7 @@ if ri.status == "running" then
         influx.setSignalLowFlow(0)  -- Optional: Stoppe den Input
         outflux.setSignalLowFlow(0)  -- Optional: Stoppe den Output
     end
-end
-		
+end		
     -- safeguards
     --
     -- out of fuel, kill it
