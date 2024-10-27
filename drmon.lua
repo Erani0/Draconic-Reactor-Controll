@@ -179,17 +179,30 @@ function patch()
   file.close()
 end
 
-function secondsToClock(seconds)
-  local seconds = tonumber(seconds)
+function secondsToClock(time)
+  local seconds = tonumber(time)
 
-  if seconds <= 0 then
-    return "00h00m00s";
-  else
-    hours = string.format("%02.f", math.floor(seconds/3600));
-    mins = string.format("%02.f", math.floor(seconds/60 - (hours*60)));
-    secs = string.format("%02.f", math.floor(seconds - hours*3600 - mins *60));
-    return hours.."h"..mins.."m"..secs.."s"
-  end
+	if seconds <= 0 then
+    		return "00h00m00s";
+ 	else
+		local days = math.floor(time/86400)
+		local remaining = time % 86400
+		local hours = math.floor(remaining/3600)
+			remaining = remaining % 3600
+		local minutes = math.floor(remaining/60)
+			remaining = remaining % 60
+		local seconds = remaining
+		if (hours < 10) then
+			hours = "0" .. tostring(hours)
+		end
+		if (minutes < 10) then
+			minutes = "0" .. tostring(minutes)
+		end
+		if (seconds < 10) then
+			seconds = "0" .. tostring(seconds)
+		end
+	return days.."d "..hours..":"..minutes..":"..seconds
+	end
 end
 
 function wireless()
