@@ -143,19 +143,21 @@ function update()
     end
     -- are we on? regulate the input fludgate to our target field strength
     -- or set it to our saved setting since we are on manual
+-- Define constants
 local MAX_INPUT_RATE = 260000 -- Max input rate in RF/t
 local MAX_GENERATION = 6000000 -- Max generation capacity
 
 -- Function to calculate optimal input based on generation rate
 local function calculateOptimalInput(generationRate, temperature, targetTemperature)
-    -- Calculate the optimal input required to achieve the desired generation rate
-    local requiredInput = (generationRate / (targetTemperature / temperature)) * (1 - (targetStrength / 100))
-    return math.min(requiredInput, MAX_INPUT_RATE) -- Limit to MAX_INPUT_RATE
+    -- This formula needs to be refined to achieve the desired generation rate based on current conditions
+    local requiredInput = generationRate / (targetTemperature / temperature)
+    -- Ensure the required input does not exceed the maximum input rate
+    return math.min(requiredInput, MAX_INPUT_RATE)
 end
 
 -- Function to calculate optimal output based on current energy saturation
 local function calculateOptimalOutput(energySaturation, generationRate)
-    -- For simplicity, assume output is based on the current generation capacity
+    -- Assume the output is based on the current generation capacity
     return math.min(generationRate, energySaturation) -- Limit to current energy level
 end
 
@@ -164,7 +166,10 @@ if ri.status == "running" then
     local autoInFlux = calculateOptimalInput(ri.generationRate, ri.temperature, targetTemperature)
     local autoOutFlux = calculateOptimalOutput(ri.energySaturation, ri.generationRate)
 
-    -- Log the target input and output gate values
+    -- Log the target input and output gate values for debugging
+    print("Current Generation Rate: " .. ri.generationRate)
+    print("Current Temperature: " .. ri.temperature)
+    print("Target Temperature: " .. targetTemperature)
     print("Calculated Input Gate: " .. autoInFlux)
     print("Calculated Output Gate: " .. autoOutFlux)
 
