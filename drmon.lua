@@ -1,10 +1,10 @@
-local reactorSide, igateName, ogateName, monName, mon, monitor, monX, monY, reactor, outflux, influx, ri, monType, modem, message
+local reactorSide, igateName, ogateName, monName, oFlow, iFlow, mon, monitor, monX, monY, reactor, outflux, influx, ri, monType, modem, message
 
-local targetStrength = 15
-local maxTemperature = 9000
+local targetStrength = 25
+local maxTemperature = 7900
 local safeTemperature = 3000
-local targetTemperature = 8000
-local lowestFieldPercent = 10
+local targetTemperature = 7000
+local lowestFieldPercent = 15
 
 local activateOnCharged = 1
 local identify = false
@@ -28,6 +28,8 @@ function save_config()
   sw.writeLine(igateName)
   sw.writeLine(ogateName)
   sw.writeLine(monName)
+  sw.writeLine(oFlow)
+  sw.writeLine(iFlow)
   sw.close()
 end
 
@@ -40,6 +42,8 @@ function load_config()
   igateName = sr.readLine()
   ogateName = sr.readLine()
   monName = sr.readLine()
+  oFlow = tonumber(sr.readLine())
+  iFlow = tonumber(sr.readLine())
   sr.close()
 end
 
@@ -89,25 +93,25 @@ function update()
     if ri.temperature > 6500 and ri.temperature <= 7900 then tempColor = colors.lime end
     if ri.temperature > 7900 and ri.temperature <= 8100 then tempColor = colors.orange end
     f.draw_text_lr(mon, 2, 5, 1, "Temperature", pad(f.format_int(ri.temperature),13," ") .. " C", colors.white, tempColor, colors.black)
- 
-    local eta
-    eta = ( ri.maxFuelConversion - ri.fuelConversion ) / ( ri.fuelConversionRate / 1000000 * 20 )
-    f.draw_text_lr(mon, 2, 6, 1, "ETA ", pad(secondsToClock(eta),11," "), colors.white, colors.blue, colors.black)
+		if ri.status == "running" then
+    	local eta
+    	eta = (ri.maxFuelConversion - ri.fuelConversion) / (ri.fuelConversionRate / 1000000 * 20)
+			print("ETA: ", round2(eta))
+    	f.draw_text_lr(mon, 2, 6, 1, "ETA", pad(tostring(round2(eta)),11," ") .. "", colors.white, colors.blue, colors.black)
+    end
     f.draw_text_lr(mon, 2, 8, 1, "Output Gate", pad(f.format_int(outFlow),10," ") .. " rf/t", colors.white, colors.blue, colors.black)
     f.draw_text_lr(mon, 2, 9, 1, "Input Gate", pad(f.format_int(inFlow),11," ") .. " rf/t", colors.white, colors.blue, colors.black)
 
-    -- local satPercent
-    -- satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000)*.01
-    -- f.draw_text_lr(mon, 2, 11, 1, "Energy Saturation", pad(tostring(satPercent),8," ") .. "%", colors.white, colors.white, colors.black)
-    -- f.progress_bar(mon, 2, 12, mon.X-2, satPercent, 100, colors.blue, colors.gray)
-
+    local satPercent
+    satPercent = math.ceil(ri.energySaturation / ri.maxEnergySaturation * 10000)*.01
+    f.draw_text_lr(mon, 2, 11, 1, "Energy Saturation", pad(tostring(satPercent),8," ") .. "%", colors.white, colors.white, colors.black)
+    f.progress_bar(mon, 2, 12, mon.X-2, satPercent, 100, colors.blue, colors.gray)
     local fieldPercent, fieldColor
     fieldPercent = math.ceil(ri.fieldStrength / ri.maxFieldStrength * 10000)*.01
     fieldColor = colors.red
     if fieldPercent >= 50 then fieldColor = colors.green end
     if fieldPercent < 50 and fieldPercent > 30 then fieldColor = colors.orange end
-
-    f.draw_text_lr(mon, 2, 14, 1, "Field Strength T:" .. targetStrength, pad(tostring(fieldPercent),6," ") .. "%", colors.white, fieldColor, colors.black)
+    f.draw_text_lr(mon, 2, 14, 1, "Field Strength T:" .. targetStrength, fieldPercent .. "%", colors.white, fieldColor, colors.black)
     f.progress_bar(mon, 2, 15, mon.X-2, fieldPercent, 100, fieldColor, colors.gray)
 
     local fuelPercent, fuelColor
@@ -137,14 +141,16 @@ function update()
     if ri.status == "warming_up" and activateOnCharged == 1 then
       reactor.activateReactor()
     end
-    -- are we on? regulate the input fluxgate to our target field strength and the output fluxgate to our target temperature
+    -- are we on? regulate the input fludgate to our target field strength
+    -- or set it to our saved setting since we are on manual
     if ri.status == "running" then
-      autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/100) )
-      autoOutFlux = ( math.max( 10, ri.generationRate ) / ( ri.temperature / targetTemperature ) )
-      print("Target Input Gate: ".. autoInFlux)
-      print("Target Output Gate: ".. autoOutFlux)
-      influx.setSignalLowFlow(autoInFlux)
-      outflux.setSignalLowFlow(autoOutFlux)
+		autoInFlux = ri.fieldDrainRate / (1 - (targetStrength/100) )
+		autoOutFlux = (math.max( 10, ri.generationRate) / (ri.temperature / targetTemperature))
+		print("Target Input Gate: ".. autoInFlux)
+		print("Target Output Gate: ".. autoOutFlux)
+		influx.setSignalLowFlow(autoInFlux)
+		outflux.setSignalLowFlow(autoOutFlux)
+		save_config()
     end
     -- safeguards
     --
@@ -169,16 +175,9 @@ function update()
     sleep(0.1)
   end
 end
-	
-function patch()
-  local installURL = "https://raw.githubusercontent.com/hiersekornc/drmon/full-auto/install.lua"
-  install = http.get(installURL)
-  installFile = install.readAll()
-  local file = fs.open("startup", "w")
-  file.write(installFile)
-  file.close()
-end
-
+	function round2(num)
+		return SecondsToClock(tonumber(string.format("%." .. 0 .. "f", num)))
+	end
 	function SecondsToClock(time)
 	  local time = tonumber(time)
 
@@ -204,6 +203,15 @@ end
 		return days.."d "..hours..":"..minutes..":"..seconds
 	  end
 	end
+
+function patch()
+  local installURL = "https://raw.githubusercontent.com/Erani0/drmon/full-auto/install.lua"
+  install = http.get(installURL)
+  installFile = install.readAll()
+  local file = fs.open("startup", "w")
+  file.write(installFile)
+  file.close()
+end
 
 function wireless()
   modem = "none"
@@ -269,6 +277,9 @@ influx = peripheral.wrap(igateName)
 outflux = peripheral.wrap(ogateName)
 reactor = peripheral.wrap(reactorSide)
 
+influx.setSignalLowFlow(iFlow)
+outflux.setSignalLowFlow(oFlow)
+
 monX, monY = monitor.getSize()
 mon = {}
 mon.monitor,mon.X, mon.Y = monitor, monX, monY
@@ -276,3 +287,4 @@ monitor.setBackgroundColor(colors.black)
 monitor.clear()
 
 parallel.waitForAll(update, wireless)
+
